@@ -65,6 +65,7 @@ class Entity:
         self.img = img
         self.RightToLeft = True
         self.side_touches = 0
+        self.dead = False
 
     def update(self, delta_time: float):
         self.position += self.velocity * delta_time
@@ -75,11 +76,24 @@ class Entity:
     def __repr__(self):
         return f'Entity(position={repr(self.position)}, velocity={repr(self.position)})'
 
-    def kill(self):
-        if self.position.y > 700 or self.position.y < 0 or self.position.x > 800 or self.position.x < 0:
-            print("Dead")
-            self.position.x = 666
-            self.position.y = 666
+    def respawn(self):
+        v = Vector2(350, 0)
+        self.position = v
+        self.velocity = Vector2()
+        self.img = self.img
+        self.RightToLeft = True
+        self.side_touches = 0
+
+    def isdead(self):
+        return self.dead
+
+    def die(self):
+        v = Vector2()
+        pos = Vector2(350, 0)
+        self.velocity = v
+        self.position = pos
+        self.dead = True
+        return True
 
     def borders(self):
         x = self.position.x
@@ -101,12 +115,32 @@ class Entity:
         if y < -100:
             pass
 
+    def is_touching_border(self):
+        x = self.position.x
+        y = self.position.y
+        if x > 735:
+            return True
+        elif x < 2:
+            return True
+        if y > 535:
+            return True
+        if y < 0:
+            return True
+        return False
+
+    def animation(self, imgtarget, win):
+
+        t = time.time() + 0.5
+        while t > time.time():
+            self.render(win)
+        self.img = imgtarget
+        self.render(win)
+
     def collision(self, other):
         if isinstance(other, Entity):
             distance = math.sqrt(
                 math.pow(self.position.x - other.position.x, 2) + math.pow(self.position.y - other.position.y, 2))
             if distance < 36:
-                print("Collision")
                 return True
 
 
@@ -154,18 +188,30 @@ class Spaceship(Entity):
         win.blit(self.img, (self.position.x, self.position.y))
 
     def firepos(self):
-        return Bullet(self.position.x, self.position.y)
+        return Bullet(self.position.x + 12, self.position.y)
 
 
 class Enemy(Entity):
     MAX_THRUST = 200.0
 
     def __init__(self):
-        img = pygame.image.load("enemy.png")
-        img1 = pygame.image.load("enemy1.png")
-        super(Enemy, self).__init__(Vector2(350, 0), img)
-        self.img = img
-        self.img1 = img1
+
+        self.is_dead = False
+        self.sprites = []
+        self.sprites.append(pygame.image.load("enemy.png"))
+        self.sprites.append(pygame.image.load("enemy2.png"))
+        self.current_sprite = 0
+        self.img = self.sprites[int(self.current_sprite)]
+        super(Enemy, self).__init__(Vector2(350, 0), self.img)
+
+    def update_sprite(self):
+        increasing = True
+        if self.current_sprite == 0:
+            self.current_sprite = 1
+            increasing = True
+        elif self.current_sprite == 1:
+            self.current_sprite = 0
+        self.img = self.sprites[int(self.current_sprite)]
 
     def move(self, delta_time: float):
         prev_value = self.velocity.copy()
@@ -189,11 +235,20 @@ class Bullet(Entity):
         self.player_y = player_y
         self.is_shot = False
 
-    def fireBullet(self):
+    def fire_bullet(self):
         if KEYMAP[pygame.K_LALT]:
             self.velocity.y = -300
+            self.is_shot = True
             return True
         return False
+
+    def respawn(self):
+        v = Vector2(0, 0)
+        self.position = v
+        self.velocity = Vector2()
+        self.img = self.img
+        self.RightToLeft = True
+        self.side_touches = 0
 
 
 TARGET_FPS = 60
@@ -204,8 +259,8 @@ def main():
     pygame.init()
     win = pygame.display.set_mode((800, 600))
     background = pygame.image.load('background1.png')
-    e = Spaceship().firepos()
-    entities = [e, Enemy(), Spaceship()]
+    bullet = Spaceship().firepos()
+    entities = [bullet, Enemy(), Spaceship()]
     running = True
     last_time = time.time()
     last_tick = time.time()
@@ -227,12 +282,19 @@ def main():
 
         for entity in entities:
             # checks if entity is dead
-            entity.kill()
-            if entity.position.x == 666 and entity.position.y == 666:
+            if entities[1].collision(entities[2]) and not new_bullet:
+                print("Game Over")
+                running = False
+            # collision between bullet and enemy
+            if entities[0].collision(entities[1]) and entities[0].is_shot:
                 new_bullet = False
-            a = entities[0].fireBullet()
+                entities[1].die()
+                entities[1].update_sprite()
+            a = entities[0].fire_bullet()
             if a:
                 new_bullet = True
+            if entities[0].is_touching_border():
+                new_bullet = False
             if not a and not new_bullet:
                 entities[0] = (entities[2].firepos())
             entity.borders()
@@ -246,7 +308,6 @@ def main():
             # renders game
             entity.render(win)
             # collision between spaceship and enemy
-            entities[1].collision(entities[2])
 
         pygame.display.update()
         after_time = time.time()
