@@ -44,28 +44,29 @@ while running:
     elif teleport_points == 1:
         win.blit(teleportImg1, (10, 10))
     for event in pygame.event.get():
+        print(event)
         if event.type == pygame.QUIT:
             running = False
-    if event.type == pygame.KEYDOWN:
-        if event.key == pygame.K_F12:
-            teleport_points = 3
-        if event.key == pygame.K_LEFT:
-            playerX -= 5
-        elif event.key == pygame.K_RIGHT:
-            playerX += 5
-        elif event.key == pygame.K_UP:
-            playerY -= 5
-        elif event.key == pygame.K_DOWN:
-            playerY += 5
-        # Teleportation
-        if event.key == pygame.K_RALT and teleport_points > 0:
-            pygame.time.wait(50)
-            playerX += 100
-            teleport_points -= 1
-        if event.key == pygame.K_LALT and teleport_points > 0:
-            pygame.time.wait(50)
-            teleport_points -= 1
-            playerX -= 100
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_F12:
+                teleport_points = 3
+            if event.key == pygame.K_LEFT:
+                playerX -= 5
+            elif event.key == pygame.K_RIGHT:
+                playerX += 5
+            elif event.key == pygame.K_UP:
+                playerY -= 5
+            elif event.key == pygame.K_DOWN:
+                playerY += 5
+            # Teleportation
+            if event.key == pygame.K_RALT and teleport_points > 0:
+                pygame.time.wait(50)
+                playerX += 100
+                teleport_points -= 1
+            if event.key == pygame.K_LALT and teleport_points > 0:
+                pygame.time.wait(50)
+                teleport_points -= 1
+                playerX -= 100
     # Borders
     if playerX > 735:
         playerX = 735
