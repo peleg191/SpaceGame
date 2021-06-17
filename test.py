@@ -14,6 +14,7 @@ KEYMAP = {
     pygame.K_UP: False,
     pygame.K_DOWN: False,
     pygame.K_SPACE: False,
+    pygame.K_LALT: False,
     pygame.K_F12: False,
 }
 
@@ -74,6 +75,12 @@ class Entity:
     def __repr__(self):
         return f'Entity(position={repr(self.position)}, velocity={repr(self.position)})'
 
+    def kill(self):
+        if self.position.y > 700 or self.position.y < 0 or self.position.x > 800 or self.position.x < 0:
+            print("Dead")
+            self.position.x = 666
+            self.position.y = 666
+
     def borders(self):
         x = self.position.x
         y = self.position.y
@@ -88,10 +95,11 @@ class Entity:
             self.velocity = self.velocity.__mul__(v)
             self.side_touches += 1
             self.RightToLeft = True
-        if y > 700:
-            self.position.y = 0
+        if y > 535:
+            self.position.y = 535
+            self.velocity = self.velocity.__mul__(Vector2(0, -1))
         if y < -100:
-            self.position.y = 599
+            pass
 
     def collision(self, other):
         if isinstance(other, Entity):
@@ -179,12 +187,13 @@ class Bullet(Entity):
         super(Bullet, self).__init__(Vector2(player_x, player_y), img_bullet)
         self.player_x = player_x
         self.player_y = player_y
-
-    def render(self, win):
-        win.blit(self.img, (self.player_x, self.player_y))
+        self.is_shot = False
 
     def fireBullet(self):
-        self.velocity.y -= 5
+        if KEYMAP[pygame.K_LALT]:
+            self.velocity.y = -300
+            return True
+        return False
 
 
 TARGET_FPS = 60
@@ -195,12 +204,13 @@ def main():
     pygame.init()
     win = pygame.display.set_mode((800, 600))
     background = pygame.image.load('background1.png')
-    entities = [Spaceship().firepos(), Enemy(), Spaceship()]
+    e = Spaceship().firepos()
+    entities = [e, Enemy(), Spaceship()]
     running = True
     last_time = time.time()
     last_tick = time.time()
     fps = 0
-    entities[0].fireBullet()
+    new_bullet = False
     while running:
         current_time = time.time()
         delta = current_time - last_time
@@ -216,6 +226,15 @@ def main():
                 KEYMAP[event.key] = False
 
         for entity in entities:
+            # checks if entity is dead
+            entity.kill()
+            if entity.position.x == 666 and entity.position.y == 666:
+                new_bullet = False
+            a = entities[0].fireBullet()
+            if a:
+                new_bullet = True
+            if not a and not new_bullet:
+                entities[0] = (entities[2].firepos())
             entity.borders()
             entity.update(delta)
             # enemy movment
