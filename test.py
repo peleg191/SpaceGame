@@ -1,5 +1,3 @@
-from array import array
-from typing import *
 import pygame
 import math
 import time
@@ -67,6 +65,7 @@ class Entity:
         self.RightToLeft = True
         self.touches = 0
         self.dead = False
+        self.isfloor = False
 
     def update(self, delta_time: float):
         self.position += self.velocity * delta_time
@@ -84,9 +83,8 @@ class Entity:
         self.touches = 0
         rnd_x = random.randint(200, 700)
         if touches_in_a_second > 12:
-            self.position.y -= 50
-            self.velocity = Vector2(0, -5)
-
+            self.position.y -= 120
+            # self.velocity = Vector2(1, -3)
 
     def die(self):
         x = random.randint(10, 600)
@@ -112,10 +110,12 @@ class Entity:
             self.velocity = self.velocity.__mul__(v)
             self.touches += 1
             self.RightToLeft = True
-        if y > 535:
-            self.position.y = 534
-            self.touches += 1
-            self.velocity = self.velocity.__mul__(Vector2(0, -1))
+        if y > 570:
+            # self.position.y = 534
+            # self.touches += 1
+            # self.velocity = self.velocity.__mul__(Vector2(0, -1))
+            self.position.y = -90
+            self.velocity *= 0.7
         if y < -100:
             self.position.y = -90
             self.velocity = self.velocity.__mul__(Vector2(0, 1))
@@ -183,24 +183,32 @@ class Spaceship(Entity):
         prev_value = self.velocity.copy()
         prev_press = ""
         if KEYMAP[pygame.K_UP]:
+            self.position.y -= 1
             self.velocity.y -= Spaceship.THRUST * delta_time
             prev_press = "up"
         if KEYMAP[pygame.K_DOWN]:
+            self.position.y += 1
             self.velocity.y += Spaceship.THRUST * delta_time
             prev_press = "down"
         if KEYMAP[pygame.K_LEFT]:
+            self.position.x -= 1
             prev_press = "left"
             self.velocity.x -= Spaceship.THRUST * delta_time
-
         if KEYMAP[pygame.K_RIGHT]:
+            self.position.x += 1
             prev_press = "right"
             self.velocity.x += Spaceship.THRUST * delta_time
+        if KEYMAP[pygame.K_F12]:
+            self.isfloor = True
         if KEYMAP[pygame.K_SPACE] and self.TELEPORT_POINTS > 0:
             if prev_press == "right":
                 self.position.x += 100
                 self.use_teleport()
-            if prev_press == "left":
+            elif prev_press == "left":
                 self.position.x -= 100
+                self.use_teleport()
+            elif prev_press == "up":
+                self.position.y -= 100
                 self.use_teleport()
         if self.velocity.length() >= Spaceship.MAX_THRUST:
             self.velocity = prev_value
@@ -218,6 +226,30 @@ class Spaceship(Entity):
     def teleport_points_add(self):
         if self.kills - 1 % 2 and self.TELEPORT_POINTS < 10:
             self.TELEPORT_POINTS += 1
+
+    def borders(self):
+        x = self.position.x
+        y = self.position.y
+        v = Vector2(-0.5, 0)
+        if x > 735:
+            self.position.x = 734
+            self.velocity = self.velocity.__mul__(v)
+            self.touches += 1
+            self.RightToLeft = False
+        elif x < 2:
+            self.position.x = 3
+            self.velocity = self.velocity.__mul__(v)
+            self.touches += 1
+            self.RightToLeft = True
+        if y > 535:
+            self.position.y = 530
+            self.touches += 1
+            self.velocity = self.velocity.__mul__(Vector2(0, -1))
+            # self.position.y = -90
+            # self.velocity *= 0.7
+        if y < 0:
+            self.position.y = 10
+            self.velocity = self.velocity.__mul__(Vector2(0, -1))
 
 
 class Enemy(Entity):
@@ -245,13 +277,13 @@ class Enemy(Entity):
 
     def move(self, delta_time: float):
         prev_value = self.velocity.copy()
-        thrust = random.randint(1, 200)
+        thrust = random.randint(50, 200)
         dy = random.randint(1, 160)
         if self.RightToLeft:
             self.velocity.x += thrust * delta_time
         else:
             self.velocity.x -= thrust * delta_time
-        if self.velocity.length() >= Enemy.MAX_THRUST:
+        if self.velocity.length() >= self.MAX_THRUST:
             self.velocity = prev_value
         self.velocity.y += dy * delta_time
 
@@ -311,19 +343,20 @@ def main():
     text_surface = my_font.render(' 123', False, (200, 0, 244))
     text_surface1 = my_font.render(' 123', False, (200, 0, 244))
     text_surface_lives = my_font.render('123', False, (200, 244, 244))
+    text_surface_general = my_font.render('123', False, (200, 244, 244))
     win = pygame.display.set_mode((800, 600))
     win.blit(text_surface, (0, 0))
     background = pygame.image.load('background1.png')
     bullet = Spaceship().firepos()
     enemy1 = Enemy()
-    cooldown = False
     enemy1.position.x = 200
     enemy2 = Enemy()
     enemy2.position.x = 100
     enemy2.RightToLeft = False
     heart = Item()
-    heart.position.x = -10
-    heart.position.y = -10
+    heart_appear = False
+    heart.position.x = -100
+    heart.position.y = -100
     entities = [bullet, Spaceship(), Enemy(), enemy1, enemy2, heart]
     running = True
     last_time = time.time()
@@ -332,6 +365,8 @@ def main():
     last_touches = 0
     fps = 0
     new_bullet = False
+    t = time.time()
+    cooldown = False
     while running:
         current_time = time.time()
         delta = current_time - last_time
@@ -345,25 +380,28 @@ def main():
                 KEYMAP[event.key] = True
             elif event.type == pygame.KEYUP and event.key in KEYMAP:
                 KEYMAP[event.key] = False
-        t = time.time()
+
         for entity in entities:
             # cooldown of a second for the life system
+            # checks if player is hit
             if time.time() > t:
                 cooldown = False
-            # checks if player is hit
             if (entities[1].collision(entities[2]) or entities[1].collision(entities[3]) or entities[1].collision(
-                    entities[4])) and not cooldown:
+                    entities[4]) or entities[2].collision(entities[1]) or entities[3].collision(entities[1]) or \
+                    entities[4].collision(entities[1])) and not cooldown:
                 entities[1].LIVES -= 1
                 cooldown = True
-                t = time.time() + 10
+                t = time.time() + 3
+                print(t)
                 print("Game Over")
                 if entities[1].LIVES < 1:
                     running = False
             if type(entity) is Item:
                 entity.pickup(entities[1])
                 # every 10 seconds heart appears on the map
-                if a_second % 600 == 0:
+                if a_second % 600 == 0 and entities[1].LIVES == 1:
                     print("Heart Appears")
+                    heart_appear = True
                     heart.appear()
             # collision between bullet and enemies -> need help in this area. now a good looking code.
             if entities[0].collision(entities[2]) and entities[0].is_shot:
@@ -402,7 +440,7 @@ def main():
             if a_second % 120 == 0 and type(entity) is Enemy:
                 if entity.touches - last_touches > 12:
                     entity.respawn(entity.touches - last_touches)
-                    entity.move(delta)
+                    # entity.move(delta)
                 last_touches = entity.touches
             # enemy movment
             if type(entity) is Enemy:
@@ -411,14 +449,16 @@ def main():
             text_surface1 = my_font.render('Teleport points {0}'.format(entities[1].TELEPORT_POINTS), False,
                                            (200, 0, 244))
             text_surface_lives = my_font.render(' {0} Lives'.format(entities[1].LIVES), False, (200, 0, 244))
+            text_surface_general = my_font.render("Life Cooldown On", False, (200, 0, 244))
         win.fill((0, 0, 0))
         win.blit(background, (0, 0))
         win.blit(text_surface, (0, 0))
         win.blit(text_surface_lives, (0, 50))
         win.blit(text_surface1, (600, 0))
+        if cooldown:
+            win.blit(text_surface_general, (300, 300))
         for entity in entities:
             entity.render(win)
-
         pygame.display.update()
         after_time = time.time()
         frame_time = after_time - before_time
