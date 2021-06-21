@@ -83,9 +83,10 @@ class Entity:
     def respawn(self, touches_in_a_second):
         self.touches = 0
         rnd_x = random.randint(200, 700)
-        if touches_in_a_second > 10:
-            self.position.x = rnd_x
-            self.position.y = -50
+        if touches_in_a_second > 12:
+            self.position.y -= 50
+            self.velocity = Vector2(0, -5)
+
 
     def die(self):
         x = random.randint(10, 600)
@@ -100,7 +101,7 @@ class Entity:
     def borders(self):
         x = self.position.x
         y = self.position.y
-        v = Vector2(-1, 0)
+        v = Vector2(-0.5, 0)
         if x > 735:
             self.position.x = 734
             self.velocity = self.velocity.__mul__(v)
@@ -133,30 +134,40 @@ class Entity:
         return False
 
     def collision(self, other):
-        v = Vector2(1, 1)
+        v_self = Vector2(self.velocity.x, self.velocity.y)
+        v_other = Vector2(other.velocity.x, other.velocity.y)
         rnd = random.randint(7, 10)
-        rnd1 = random.randint(6, 9)
+        rnd1 = random.randint(7, 10)
         if isinstance(other, Entity):
             distance = math.sqrt(
                 math.pow(self.position.x - other.position.x, 2) + math.pow(self.position.y - other.position.y, 2))
             if distance < 36:
                 if self.velocity.x > 0:
-                    self.position.x -= 10
+                    self.position.x -= 6
                 elif self.velocity.x < 0:
-                    self.position.x += 10
-                else:
-                    self.position.y += 10
-                    other.position.y -= 10
-                other.velocity = other.velocity * Vector2(-0.1 * rnd, -1)
+                    self.position.x += 6
+                if self.velocity.y < 0:
+                    self.position.y += 6
+                elif self.velocity.y > 0:
+                    self.position.y -= 6
+                if other.velocity.x > 0:
+                    other.position.x -= 6
+                elif other.velocity.x < 0:
+                    other.position.x += 6
+                if other.velocity.y < 0:
+                    other.position.y += 6
+                elif other.velocity.y > 0:
+                    other.position.y -= 6
+
+                other.velocity = v_other * Vector2(-0.1 * rnd, -1)
+                other.touches += 1
+                self.velocity = v_self * Vector2(-1, -0.1 * rnd1)
                 self.touches += 1
-                self.velocity = self.velocity * Vector2(-1, -0.1 * rnd1)
-                self.touches += 1
-                # self.position.__add__(v)
                 return True
 
 
 class Spaceship(Entity):
-    THRUST = 100.0
+    THRUST = 250.0
     MAX_THRUST = 300.0
     TELEPORT_POINTS = 3
     LIVES = 3
@@ -234,8 +245,8 @@ class Enemy(Entity):
 
     def move(self, delta_time: float):
         prev_value = self.velocity.copy()
-        thrust = random.randint(1, 99)
-        dy = random.randint(1, 35)
+        thrust = random.randint(1, 200)
+        dy = random.randint(1, 160)
         if self.RightToLeft:
             self.velocity.x += thrust * delta_time
         else:
@@ -288,6 +299,7 @@ class Item(Entity):
             self.position.y = -100
             spaceship.LIVES += 1
 
+
 TARGET_FPS = 60
 TARGET_FRAME_TIME = 1 / TARGET_FPS
 
@@ -296,9 +308,9 @@ def main():
     pygame.init()
     pygame.font.init()
     my_font = pygame.font.Font('superstarfont.ttf', 20)
-    text_surface = my_font.render(' 123', False, (244, 0, 244))
-    text_surface1 = my_font.render(' 123', False, (244, 0, 244))
-    text_surface_lives = my_font.render('123', False, (244, 244, 244))
+    text_surface = my_font.render(' 123', False, (200, 0, 244))
+    text_surface1 = my_font.render(' 123', False, (200, 0, 244))
+    text_surface_lives = my_font.render('123', False, (200, 244, 244))
     win = pygame.display.set_mode((800, 600))
     win.blit(text_surface, (0, 0))
     background = pygame.image.load('background1.png')
@@ -343,15 +355,15 @@ def main():
                     entities[4])) and not cooldown:
                 entities[1].LIVES -= 1
                 cooldown = True
-                t = time.time() + 1
+                t = time.time() + 10
                 print("Game Over")
                 if entities[1].LIVES < 1:
                     running = False
             if type(entity) is Item:
                 entity.pickup(entities[1])
-                # every x seconds heart appears on the map
-                if a_second % 400 == 0:
-                    print("shalom")
+                # every 10 seconds heart appears on the map
+                if a_second % 600 == 0:
+                    print("Heart Appears")
                     heart.appear()
             # collision between bullet and enemies -> need help in this area. now a good looking code.
             if entities[0].collision(entities[2]) and entities[0].is_shot:
@@ -377,19 +389,6 @@ def main():
             entities[2].collision(entities[3])
             entities[3].collision(entities[4])
             entities[4].collision(entities[2])
-            # collision between the enemies among themselves
-            # if entities[2].collision(entities[3]):
-            #     entities[2].velocity = entities[2].velocity * Vector2(-1, -1)
-            #     entities[2].position.x += 2
-            #     entities[3].velocity = entities[3].velocity * Vector2(-1, -1)
-            # elif entities[2].collision(entities[4]):
-            #     entities[2].velocity = entities[2].velocity * Vector2(-1, -1)
-            #     entities[2].position.x += 2
-            #     entities[4].velocity = entities[4].velocity * Vector2(-1, -1)
-            # elif entities[3].collision(entities[4]):
-            #     entities[3].position.x += 2
-            #     entities[3].velocity = entities[3].velocity * Vector2(-1, -1)
-            #     entities[4].velocity = entities[4].velocity * Vector2(-1, -1)
             a = entities[0].fire_bullet()
             if a:
                 new_bullet = True
@@ -399,23 +398,23 @@ def main():
                 entities[0] = (entities[1].firepos())
             entity.borders()
             entity.update(delta)
-            if a_second % 2 == 0 and type(entity) is Enemy:
-                if entity.touches - last_touches > 10:
+            # every 2 seconds, if the entity is enemy and there were 12 collions, respawns the enemy
+            if a_second % 120 == 0 and type(entity) is Enemy:
+                if entity.touches - last_touches > 12:
                     entity.respawn(entity.touches - last_touches)
                     entity.move(delta)
                 last_touches = entity.touches
             # enemy movment
-            entities[2].move(delta)
-            entities[3].move(delta)
-            entities[4].move(delta)
-            text_surface = my_font.render(' {0} kills'.format(entities[1].kills), False, (244, 0, 244))
+            if type(entity) is Enemy:
+                entity.move(delta)
+            text_surface = my_font.render(' {0} kills'.format(entities[1].kills), False, (200, 0, 244))
             text_surface1 = my_font.render('Teleport points {0}'.format(entities[1].TELEPORT_POINTS), False,
-                                           (244, 0, 244))
-            text_surface_lives = my_font.render(' {0} Lives'.format(entities[1].LIVES), False, (244, 0, 244))
+                                           (200, 0, 244))
+            text_surface_lives = my_font.render(' {0} Lives'.format(entities[1].LIVES), False, (200, 0, 244))
         win.fill((0, 0, 0))
         win.blit(background, (0, 0))
         win.blit(text_surface, (0, 0))
-        win.blit(text_surface_lives, (0, 100))
+        win.blit(text_surface_lives, (0, 50))
         win.blit(text_surface1, (600, 0))
         for entity in entities:
             entity.render(win)
@@ -427,7 +426,6 @@ def main():
             time.sleep(TARGET_FRAME_TIME - frame_time)
             a_second += 1
         if time.time() - last_tick >= 1:
-
             print(f'FPS: {fps}')
             fps = 0
             last_tick = time.time()
