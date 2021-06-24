@@ -83,7 +83,7 @@ class Entity:
         self.touches = 0
         rnd_x = random.randint(200, 700)
         if touches_in_a_second > 12:
-            self.position.y -= 120
+            self.position.y -= 50
             # self.velocity = Vector2(1, -3)
 
     def die(self):
@@ -158,7 +158,6 @@ class Entity:
                     other.position.y += 6
                 elif other.velocity.y > 0:
                     other.position.y -= 6
-
                 other.velocity = v_other * Vector2(-0.1 * rnd, -1)
                 other.touches += 1
                 self.velocity = v_self * Vector2(-1, -0.1 * rnd1)
@@ -200,6 +199,21 @@ class Spaceship(Entity):
             self.velocity.x += Spaceship.THRUST * delta_time
         if KEYMAP[pygame.K_F12]:
             self.isfloor = True
+        if self.velocity.length() >= Spaceship.MAX_THRUST:
+            self.velocity = prev_value
+        super(Spaceship, self).update(delta_time)
+
+    def update_once_in_a_second(self):
+        prev_press = ""
+        if KEYMAP[pygame.K_UP]:
+            prev_press = "up"
+        if KEYMAP[pygame.K_DOWN]:
+            prev_press = "down"
+        if KEYMAP[pygame.K_LEFT]:
+            self.position.x -= 1
+            prev_press = "left"
+        if KEYMAP[pygame.K_RIGHT]:
+            prev_press = "right"
         if KEYMAP[pygame.K_SPACE] and self.TELEPORT_POINTS > 0:
             if prev_press == "right":
                 self.position.x += 100
@@ -210,9 +224,6 @@ class Spaceship(Entity):
             elif prev_press == "up":
                 self.position.y -= 100
                 self.use_teleport()
-        if self.velocity.length() >= Spaceship.MAX_THRUST:
-            self.velocity = prev_value
-        super(Spaceship, self).update(delta_time)
 
     def use_teleport(self):
         self.TELEPORT_POINTS -= 1
@@ -437,11 +448,11 @@ def main():
             entity.borders()
             entity.update(delta)
             # every 2 seconds, if the entity is enemy and there were 12 collions, respawns the enemy
-            if a_second % 120 == 0 and type(entity) is Enemy:
-                if entity.touches - last_touches > 12:
-                    entity.respawn(entity.touches - last_touches)
-                    # entity.move(delta)
-                last_touches = entity.touches
+            if a_second % 120 == 0 and type(entity) is Enemy and entity.touches - last_touches > 12:
+                entity.respawn(entity.touches - last_touches)
+            last_touches = entity.touches
+            if a_second % 3 == 0 and type(entity) is Spaceship:
+                entity.update_once_in_a_second()
             # enemy movment
             if type(entity) is Enemy:
                 entity.move(delta)
