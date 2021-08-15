@@ -4,21 +4,21 @@ import pygame
 pygame.init()
 win = pygame.display.set_mode((800, 600))
 # Player
-playerImg = pygame.image.load("ship.png")
+playerImg = pygame.image.load("Assets/ship.png")
 global playerX, playerY
 playerX = 370
 playerY = 470
 Xchange = 0
 teleport_points = 3
 # Caption and Icon
-icon = pygame.image.load("console.png")
+icon = pygame.image.load("Assets/console.png")
 pygame.display.set_icon(icon)
 pygame.display.set_caption("A Game")
-teleportImg = pygame.image.load("Teleport.png")
-teleportImg1 = pygame.image.load("Teleport1.png")
-teleportImg2 = pygame.image.load("Teleport2.png")
+teleportImg = pygame.image.load("Assets/Teleport.png")
+teleportImg1 = pygame.image.load("Assets/Teleport1.png")
+teleportImg2 = pygame.image.load("Assets/Teleport2.png")
 # Background
-background = pygame.image.load('background1.png')
+background = pygame.image.load('Assets/background1.png')
 
 
 # Functions

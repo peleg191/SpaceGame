@@ -4,7 +4,7 @@ import time
 import random
 
 # Caption and Icon
-icon = pygame.image.load("console.png")
+icon = pygame.image.load("Assets/console.png")
 pygame.display.set_icon(icon)
 pygame.display.set_caption("Space Game")
 KEYMAP = {
@@ -172,7 +172,7 @@ class Spaceship(Entity):
     LIVES = 3
 
     def __init__(self):
-        img = pygame.image.load("ship.png")
+        img = pygame.image.load("Assets/ship.png")
         super(Spaceship, self).__init__(Vector2(350, 500), img)
         self.img = img
         self.LIVES = 3
@@ -270,11 +270,11 @@ class Enemy(Entity):
         x_initial_position = random.randint(200, 600)
         self.is_dead = False
         self.sprites = []
-        self.sprites.append(pygame.image.load("enemy.png"))
-        self.sprites.append(pygame.image.load("enemy2.png"))
-        self.sprites.append(pygame.image.load("enemy1.png"))
-        self.sprites.append(pygame.image.load("enemy3.png"))
-        self.sprites.append(pygame.image.load("enemy4.png"))
+        self.sprites.append(pygame.image.load("Assets/enemy.png"))
+        self.sprites.append(pygame.image.load("Assets/enemy2.png"))
+        self.sprites.append(pygame.image.load("Assets/enemy1.png"))
+        self.sprites.append(pygame.image.load("Assets/enemy3.png"))
+        self.sprites.append(pygame.image.load("Assets/enemy4.png"))
         self.current_sprite = 0
         self.img = self.sprites[int(self.current_sprite)]
         super(Enemy, self).__init__(Vector2(x_initial_position, 0), self.img)
@@ -299,18 +299,31 @@ class Enemy(Entity):
         self.velocity.y += dy * delta_time
 
 
+class Music:
+    def __init__(self):
+        self.img = pygame.image.load("Assets/music.png")
+        self.img_music = pygame.image.load("Assets/music.png")
+        self.img1 = pygame.image.load("Assets/mute.png")
+        self.background_music = pygame.mixer.Sound("Assets/SpaceGame.mp3")
+        self.shot_music = pygame.mixer.Sound("Assets/shot.mp3")
+        self.pos = Vector2(0, 0)
+        pygame.mixer.Sound.play(self.background_music, 100)
+        self.shot_music.set_volume(0.05)
+
+
 class Bullet(Entity):
     def __init__(self, player_x, player_y):
-        img_bullet = pygame.image.load("bullet.png")
+        img_bullet = pygame.image.load("Assets/bullet.png")
         super(Bullet, self).__init__(Vector2(player_x, player_y), img_bullet)
         self.player_x = player_x
         self.player_y = player_y
         self.is_shot = False
 
-    def fire_bullet(self):
+    def fire_bullet(self, music: Music):
         if KEYMAP[pygame.K_LALT]:
             self.velocity.y = -300
             self.is_shot = True
+            pygame.mixer.Sound.play(music.shot_music)
             return True
         return False
 
@@ -325,7 +338,7 @@ class Bullet(Entity):
 
 class Item(Entity):
     def __init__(self):
-        self.img = pygame.image.load("heart.png")
+        self.img = pygame.image.load("Assets/heart.png")
         super().__init__(Vector2(0, 0), self.img)
 
     def appear(self):
@@ -341,8 +354,6 @@ class Item(Entity):
             self.position.x = -100
             self.position.y = -100
             spaceship.LIVES += 1
-
-
 TARGET_FPS = 60
 TARGET_FRAME_TIME = 1 / TARGET_FPS
 
@@ -350,14 +361,18 @@ TARGET_FRAME_TIME = 1 / TARGET_FPS
 def main():
     pygame.init()
     pygame.font.init()
-    my_font = pygame.font.Font('superstarfont.ttf', 20)
+    pygame.mixer.init()
+    music = Music()
+    music.pos = Vector2(0, 570)
+    my_font = pygame.font.Font('Assets/superstarfont.ttf', 20)
+    my_font2 = pygame.font.Font('Assets/superstarfont.ttf', 80)
     text_surface = my_font.render(' 123', False, (200, 0, 244))
     text_surface1 = my_font.render(' 123', False, (200, 0, 244))
     text_surface_lives = my_font.render('123', False, (200, 244, 244))
     text_surface_general = my_font.render('123', False, (200, 244, 244))
     win = pygame.display.set_mode((800, 600))
     win.blit(text_surface, (0, 0))
-    background = pygame.image.load('background1.png')
+    background = pygame.image.load('Assets/background1.png')
     bullet = Spaceship().firepos()
     enemy1 = Enemy()
     enemy1.position.x = 200
@@ -372,12 +387,15 @@ def main():
     running = True
     last_time = time.time()
     last_tick = time.time()
+    this_time = time.time()
     a_second = 0
     last_touches = 0
     fps = 0
     new_bullet = False
     t = time.time()
     cooldown = False
+    counter = 0
+    game_over = False
     while running:
         current_time = time.time()
         delta = current_time - last_time
@@ -387,26 +405,33 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_m or event.key == pygame.K_F12:
+                    if pygame.mixer.Sound.get_volume(music.background_music) > 0:
+                        pygame.mixer.Sound.set_volume(music.background_music, 0)
+                        pygame.mixer.Sound.set_volume(music.shot_music, 0)
+                        music.img = music.img1
+                    else:
+                        pygame.mixer.Sound.set_volume(music.background_music, 1.0)
+                        pygame.mixer.Sound.set_volume(music.shot_music, 0.05)
+                        music.img = music.img_music
             if event.type == pygame.KEYDOWN and event.key in KEYMAP:
                 KEYMAP[event.key] = True
             elif event.type == pygame.KEYUP and event.key in KEYMAP:
                 KEYMAP[event.key] = False
-
         for entity in entities:
             # cooldown of a second for the life system
             # checks if player is hit
             if time.time() > t:
                 cooldown = False
             if (entities[1].collision(entities[2]) or entities[1].collision(entities[3]) or entities[1].collision(
-                    entities[4]) or entities[2].collision(entities[1]) or entities[3].collision(entities[1]) or \
+                    entities[4]) or entities[2].collision(entities[1]) or entities[3].collision(entities[1]) or
                     entities[4].collision(entities[1])) and not cooldown:
                 entities[1].LIVES -= 1
                 cooldown = True
                 t = time.time() + 3
-                print(t)
-                print("Game Over")
                 if entities[1].LIVES < 1:
-                    running = False
+                    game_over = True
             if type(entity) is Item:
                 entity.pickup(entities[1])
                 # every 10 seconds heart appears on the map
@@ -421,14 +446,14 @@ def main():
                 entities[1].teleport_points_add()
                 entities[2].die()
                 entities[2].update_sprite()
-            a = entities[0].fire_bullet()
+            a = entities[0].fire_bullet(music)
             if entities[0].collision(entities[3]) and entities[0].is_shot:
                 new_bullet = False
                 entities[1].kills += 1
                 entities[1].teleport_points_add()
                 entities[3].die()
                 entities[3].update_sprite()
-            a = entities[0].fire_bullet()
+            a = entities[0].fire_bullet(music)
             if entities[0].collision(entities[4]) and entities[0].is_shot:
                 new_bullet = False
                 entities[1].kills += 1
@@ -438,7 +463,7 @@ def main():
             entities[2].collision(entities[3])
             entities[3].collision(entities[4])
             entities[4].collision(entities[2])
-            a = entities[0].fire_bullet()
+            a = entities[0].fire_bullet(music)
             if a:
                 new_bullet = True
             if entities[0].is_touching_border():
@@ -461,15 +486,25 @@ def main():
                                            (200, 0, 244))
             text_surface_lives = my_font.render(' {0} Lives'.format(entities[1].LIVES), False, (200, 0, 244))
             text_surface_general = my_font.render("Life Cooldown On", False, (200, 0, 244))
+        text_surface_game = my_font2.render("Game Over", False, (200, 0, 244))
         win.fill((0, 0, 0))
         win.blit(background, (0, 0))
         win.blit(text_surface, (0, 0))
         win.blit(text_surface_lives, (0, 50))
         win.blit(text_surface1, (600, 0))
-        if cooldown:
+        win.blit(music.img, (music.pos.x, music.pos.y))
+        if cooldown and not game_over:
             win.blit(text_surface_general, (300, 300))
         for entity in entities:
             entity.render(win)
+        if game_over:
+            if counter == 0:
+                this_time = time.time()
+            counter += 1
+            win.blit(text_surface_game, (200, 300))
+            this_time1 = time.time()
+            if this_time1 - this_time > 5:
+                running = False
         pygame.display.update()
         after_time = time.time()
         frame_time = after_time - before_time
